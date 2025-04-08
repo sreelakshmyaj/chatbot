@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #94A3B8 #1E293B;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #1E293B;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #94A3B8;
+    border-radius: 4px;
+  }
+
+  /* Light mode scrollbar */
+  .light .custom-scrollbar {
+    scrollbar-color: #CBD5E1 #E2E8F0;
+  }
+
+  .light .custom-scrollbar::-webkit-scrollbar-track {
+    background: #E2E8F0;
+  }
+
+  .light .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #CBD5E1;
+  }
+}
