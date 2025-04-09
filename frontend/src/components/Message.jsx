@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { IoCopyOutline } from "react-icons/io5";
+import { IoCheckmarkOutline } from "react-icons/io5";
 
-const Message = ({ message, isUser, timestamp, isDarkMode, isTyping }) => {
+const Message = ({ message, isUser, timestamp, isDarkMode, isTyping, isRendered }) => {
+  const [isCopied, setIsCopied] = useState(false);
+
   const userMessageStyles = isDarkMode
     ? 'bg-gradient-to-br from-[#3B82F6] to-[#6366F1] text-white'
     : 'bg-[#3B82F6] text-white hover:bg-[#60A5FA]';
@@ -13,6 +17,20 @@ const Message = ({ message, isUser, timestamp, isDarkMode, isTyping }) => {
   const timestampColor = isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]';
 
   const dotStyles = isDarkMode ? 'bg-[#F1F5F9]' : 'bg-[#0F172A]';
+
+  const copyButtonStyles = isDarkMode
+    ? 'text-[#94A3B8] hover:text-[#F1F5F9]'
+    : 'text-[#64748B] hover:text-[#0F172A]';
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
 
   const markdownComponents = {
     p: ({ children }) => <p className="my-0 leading-relaxed">{children}</p>,
@@ -54,12 +72,21 @@ const Message = ({ message, isUser, timestamp, isDarkMode, isTyping }) => {
           {message ? (
             <div className="relative w-full">
               <div className="my-markdown prose dark:prose-invert max-w-none text-inherit [&>p]:my-0 [&>p]:leading-relaxed">
-                <ReactMarkdown
-                  components={markdownComponents}
-                >
+                <ReactMarkdown components={markdownComponents}>
                   {message}
-                </ReactMarkdown> 
+                </ReactMarkdown>
               </div>
+              {!isUser && isRendered && (
+                <div className="mt-2 mb-1 mr-1 flex justify-end">
+                  <button
+                    onClick={handleCopy}
+                    className={`rounded-full ${copyButtonStyles}`}
+                    title="Copy message"
+                  >
+                    {isCopied ? <IoCheckmarkOutline size={20} /> : <IoCopyOutline size={20} />}
+                  </button>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" />
             </div> 
           ) : isTyping ? (

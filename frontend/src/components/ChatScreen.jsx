@@ -12,6 +12,8 @@ const ChatScreen = () => {
   );
 
   const botMessageIndexRef = useRef(null);
+  const eventSourceRef = useRef(null);
+  const [renderedMessages, setRenderedMessages] = useState(new Set());
 
   // Handle system theme change
   useEffect(() => {
@@ -20,6 +22,23 @@ const ChatScreen = () => {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
+
+  const handleStopGeneration = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      setIsLoading(false);
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated[botMessageIndexRef.current]) {
+          updated[botMessageIndexRef.current] = {
+            ...updated[botMessageIndexRef.current],
+            isTyping: false
+          };
+        }
+        return updated;
+      });
+    }
+  };
 
   const handleSendMessage = async (message) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -42,25 +61,26 @@ const ChatScreen = () => {
 
     try {
       const eventSource = new EventSource(`http://localhost:8000/chat-stream?prompt=${encodeURIComponent(message)}`);
+      eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
         if (event.data === "[DONE]") {
           eventSource.close();
           setIsLoading(false);
+          setRenderedMessages(prev => new Set([...prev, botMessageIndexRef.current]));
           return;
         }
       
         try {
           const data = JSON.parse(event.data);
           if (data.response) {
-            console.log(data.response)
             const idx = botMessageIndexRef.current;
             setMessages(prev => {
               const updated = [...prev];
               if (updated[idx]) {
                 updated[idx] = {
                   ...updated[idx],
-                  text: (updated[idx].text || "") + data.response, // accumulate
+                  text: (updated[idx].text || "") + data.response,
                   isTyping: false
                 };
               }
@@ -71,7 +91,6 @@ const ChatScreen = () => {
           console.error("Error parsing streamed message:", err);
         }
       };
-      
 
       eventSource.onerror = (err) => {
         console.error("EventSource error:", err);
@@ -114,11 +133,20 @@ const ChatScreen = () => {
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="max-w-2xl mx-auto">
-            <MessageList messages={messages} isDarkMode={isDarkMode} />
+            <MessageList 
+              messages={messages} 
+              isDarkMode={isDarkMode} 
+              renderedMessages={renderedMessages}
+            />
           </div>
         </div>
         <div className="max-w-2xl mx-auto w-full">
-          <InputBox onSendMessage={handleSendMessage} isDarkMode={isDarkMode} />
+          <InputBox 
+            onSendMessage={handleSendMessage} 
+            isDarkMode={isDarkMode} 
+            isLoading={isLoading}
+            onStopGeneration={handleStopGeneration}
+          />
         </div>
       </div>
     </div>

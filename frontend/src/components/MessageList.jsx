@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Message from './Message';
 
-const MessageList = ({ messages, isDarkMode }) => {
+const MessageList = ({ messages, isDarkMode, renderedMessages }) => {
   const messagesEndRef = useRef(null);
   const containerRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -41,6 +41,7 @@ const MessageList = ({ messages, isDarkMode }) => {
             timestamp={msg.timestamp}
             isDarkMode={isDarkMode}
             isTyping={msg.isTyping}
+            isRendered={renderedMessages.has(index)}
           />
         ))}
         <div ref={messagesEndRef} />
