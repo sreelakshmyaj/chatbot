@@ -40,6 +40,7 @@ const MessageList = ({ messages, isDarkMode }) => {
             isUser={msg.isUser}
             timestamp={msg.timestamp}
             isDarkMode={isDarkMode}
+            isTyping={msg.isTyping}
           />
         ))}
         <div ref={messagesEndRef} />

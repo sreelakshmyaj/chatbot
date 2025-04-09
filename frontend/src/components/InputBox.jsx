@@ -25,7 +25,7 @@ const InputBox = ({ onSendMessage, isDarkMode }) => {
       onSubmit={handleSubmit}
       className={`flex justify-center p-4 border-t ${isDarkMode ? 'border-[#1E293B] bg-[#0F172A]' : 'border-[#E2E8F0] bg-[#F8FAFC]'}`}
     >
-      <div className="flex items-center w-1/2">
+      <div className="flex items-center w-3/4">
         <input
           type="text"
           value={message}

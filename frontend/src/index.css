@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes text-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.02) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(100%) skewX(-15deg);
+  }
+}
+
+.animate-text-appear {
+  animation: text-appear 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+
 @layer utilities {
   .custom-scrollbar {
     scrollbar-width: thin;
