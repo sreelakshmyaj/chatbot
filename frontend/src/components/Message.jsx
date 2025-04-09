@@ -1,10 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { IoCopyOutline } from "react-icons/io5";
 import { IoCheckmarkOutline } from "react-icons/io5";
+import { IoVolumeMediumOutline, IoVolumeMuteOutline } from "react-icons/io5";
 
 const Message = ({ message, isUser, timestamp, isDarkMode, isTyping, isRendered }) => {
   const [isCopied, setIsCopied] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechRef = useRef(null);
+  const [voices, setVoices] = useState([]);
+
+  useEffect(() => {
+    // Load available voices
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+
+    // Load voices when they become available
+    if (window.speechSynthesis) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
+  const getFemaleVoice = () => {
+    // Try to find a female voice
+    const femaleVoice = voices.find(voice => 
+      voice.name.includes('Female') || 
+      voice.name.includes('female') ||
+      voice.name.includes('Microsoft Zira') || // Windows female voice
+      voice.name.includes('Microsoft Hazel') || // Windows female voice
+      voice.name.includes('Samantha') || // macOS female voice
+      voice.name.includes('Karen') // macOS female voice
+    );
+    return femaleVoice || voices[0]; // Fallback to first available voice if no female voice found
+  };
 
   const userMessageStyles = isDarkMode
     ? 'bg-gradient-to-br from-[#3B82F6] to-[#6366F1] text-white'
@@ -18,7 +55,7 @@ const Message = ({ message, isUser, timestamp, isDarkMode, isTyping, isRendered 
 
   const dotStyles = isDarkMode ? 'bg-[#F1F5F9]' : 'bg-[#0F172A]';
 
-  const copyButtonStyles = isDarkMode
+  const buttonStyles = isDarkMode
     ? 'text-[#94A3B8] hover:text-[#F1F5F9]'
     : 'text-[#64748B] hover:text-[#0F172A]';
 
@@ -31,6 +68,35 @@ const Message = ({ message, isUser, timestamp, isDarkMode, isTyping, isRendered 
       console.error('Failed to copy text: ', err);
     }
   };
+
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!speechRef.current) {
+      speechRef.current = new SpeechSynthesisUtterance();
+      speechRef.current.onend = () => setIsSpeaking(false);
+    }
+
+    speechRef.current.text = message;
+    speechRef.current.rate = 1;
+    speechRef.current.pitch = 1;
+    speechRef.current.voice = getFemaleVoice();
+    window.speechSynthesis.speak(speechRef.current);
+    setIsSpeaking(true);
+  };
+
+  // Clean up speech synthesis when component unmounts
+  useEffect(() => {
+    return () => {
+      if (speechRef.current) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const markdownComponents = {
     p: ({ children }) => <p className="my-0 leading-relaxed">{children}</p>,
@@ -77,10 +143,17 @@ const Message = ({ message, isUser, timestamp, isDarkMode, isTyping, isRendered 
                 </ReactMarkdown>
               </div>
               {!isUser && isRendered && (
-                <div className="mt-2 mb-1 mr-1 flex justify-end">
+                <div className="mt-2 mb-1 mr-1 flex justify-end space-x-2">
+                  <button
+                    onClick={handleSpeak}
+                    className={`rounded-full ${buttonStyles}`}
+                    title={isSpeaking ? "Stop speaking" : "Read aloud"}
+                  >
+                    {isSpeaking ? <IoVolumeMuteOutline size={20} /> : <IoVolumeMediumOutline size={20} />}
+                  </button>
                   <button
                     onClick={handleCopy}
-                    className={`rounded-full ${copyButtonStyles}`}
+                    className={`rounded-full ${buttonStyles}`}
                     title="Copy message"
                   >
                     {isCopied ? <IoCheckmarkOutline size={20} /> : <IoCopyOutline size={20} />}
