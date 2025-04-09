@@ -3,43 +3,51 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import ollama
 import json
+import re
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with your frontend origin in prod
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def root():
-    return {"message": "Ollama streaming backend is running."}
+import time
 
 @app.get("/chat-stream")
 async def chat_stream(prompt: str):
     def generate():
         print(f"🔸 Prompt received: {prompt}")
         try:
+            buffer = ""
+            last_sent = time.time()
+
             client = ollama.chat(
                 model="llama2",
                 messages=[{"role": "user", "content": prompt}],
                 stream=True
             )
 
-            any_response = False
-
             for chunk in client:
-                if hasattr(chunk, "message") and chunk.message.content.strip() != "":
-                    any_response = True
-                    yield f"data: {json.dumps({'response': chunk.message.content})}\n\n"
-                if getattr(chunk, "done", False):
-                    break
+                if hasattr(chunk, "message"):
+                    part = chunk.message.content
+                    if part:
+                        buffer += part
 
-            if not any_response:
-                yield f"data: {json.dumps({'response': '[No content received from model]'})}\n\n"
+                        now = time.time()
+                        # Send if it's been 0.3 seconds or we hit a punctuation
+                        if (now - last_sent > 0.3) or re.search(r"[.!?\n]", buffer):
+                            yield f"data: {json.dumps({'response': buffer})}\n\n"
+                            buffer = ""
+                            last_sent = now
+
+                if getattr(chunk, "done", False):
+                    if buffer:
+                        yield f"data: {json.dumps({'response': buffer})}\n\n"
+                    break
 
             yield "data: [DONE]\n\n"
 
@@ -48,6 +56,8 @@ async def chat_stream(prompt: str):
             yield f"data: {json.dumps({'response': f'[Error]: {str(e)}'})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
 
 if __name__ == "__main__":
     import uvicorn

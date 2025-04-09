@@ -49,17 +49,18 @@ const ChatScreen = () => {
           setIsLoading(false);
           return;
         }
-
+      
         try {
           const data = JSON.parse(event.data);
           if (data.response) {
+            console.log(data.response)
             const idx = botMessageIndexRef.current;
             setMessages(prev => {
               const updated = [...prev];
               if (updated[idx]) {
                 updated[idx] = {
                   ...updated[idx],
-                  text: updated[idx].text + data.response,
+                  text: (updated[idx].text || "") + data.response, // accumulate
                   isTyping: false
                 };
               }
@@ -70,6 +71,7 @@ const ChatScreen = () => {
           console.error("Error parsing streamed message:", err);
         }
       };
+      
 
       eventSource.onerror = (err) => {
         console.error("EventSource error:", err);
