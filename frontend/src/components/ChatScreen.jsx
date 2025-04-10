@@ -3,6 +3,7 @@ import MessageList from './MessageList';
 import InputBox from './InputBox';
 import { GoSun } from "react-icons/go";
 import { FaRegMoon } from "react-icons/fa";
+import { IoDownloadOutline, IoDocumentTextOutline, IoDocumentAttachOutline } from "react-icons/io5";
 
 const ChatScreen = () => {
   const [messages, setMessages] = useState([]);
@@ -10,6 +11,8 @@ const ChatScreen = () => {
   const [isDarkMode, setIsDarkMode] = useState(() =>
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
 
   const botMessageIndexRef = useRef(null);
   const eventSourceRef = useRef(null);
@@ -21,6 +24,20 @@ const ChatScreen = () => {
     const handleChange = (e) => setIsDarkMode(e.matches);
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const handleStopGeneration = () => {
@@ -110,6 +127,34 @@ const ChatScreen = () => {
     }
   };
 
+  const handleExport = async (format) => {
+    setShowExportMenu(false);
+    try {
+      const response = await fetch(`http://localhost:8000/export-conversation?format=${format}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `conversation_${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
+
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
   };
@@ -121,12 +166,63 @@ const ChatScreen = () => {
           <h1 className={`text-xl font-bold ${isDarkMode ? 'text-[#F1F5F9]' : 'text-[#0F172A]'}`}>
             ChatBot
           </h1>
-          <button
-            onClick={toggleTheme}
-            className={`p-2 text-lg rounded-full ${isDarkMode ? 'text-[#F1F5F9] hover:bg-[#1E293B]' : 'text-[#0F172A] hover:bg-[#E2E8F0]'}`}
-          >
-            {isDarkMode ? <GoSun /> : <FaRegMoon />}
-          </button>
+          <div className="flex items-center space-x-4">
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className={`p-2 rounded-full transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'text-[#F1F5F9] hover:bg-[#1E293B] hover:shadow-lg hover:shadow-[#1E293B]/20' 
+                    : 'text-[#0F172A] hover:bg-[#E2E8F0] hover:shadow-lg hover:shadow-[#E2E8F0]/20'
+                }`}
+                title="Export conversation"
+              >
+                <IoDownloadOutline size={20} />
+              </button>
+              {showExportMenu && (
+                <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-2xl z-50 ${
+                  isDarkMode 
+                    ? 'bg-[#1E293B] border border-[#334155] shadow-[#1E293B]/50' 
+                    : 'bg-white border border-[#E2E8F0] shadow-[#0F172A]/10'
+                }`}>
+                  <div className="py-1">
+                    <button
+                      onClick={() => handleExport('pdf')}
+                      className={`flex items-center w-full px-4 py-2.5 text-sm transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'text-[#F1F5F9] hover:bg-[#334155]' 
+                          : 'text-[#0F172A] hover:bg-[#F1F5F9]'
+                      }`}
+                    >
+                      <IoDocumentAttachOutline className="mr-2" size={18} />
+                      Export as PDF
+                    </button>
+                    <button
+                      onClick={() => handleExport('md')}
+                      className={`flex items-center w-full px-4 py-2.5 text-sm transition-colors duration-200 ${
+                        isDarkMode 
+                          ? 'text-[#F1F5F9] hover:bg-[#334155]' 
+                          : 'text-[#0F172A] hover:bg-[#F1F5F9]'
+                      }`}
+                    >
+                      <IoDocumentTextOutline className="mr-2" size={18} />
+                      Export as Markdown
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={toggleTheme}
+              className={`p-2 text-lg rounded-full transition-all duration-200 ${
+                isDarkMode 
+                  ? 'text-[#F1F5F9] hover:bg-[#1E293B] hover:shadow-lg hover:shadow-[#1E293B]/20' 
+                  : 'text-[#0F172A] hover:bg-[#E2E8F0] hover:shadow-lg hover:shadow-[#E2E8F0]/20'
+              }`}
+            >
+              {isDarkMode ? <GoSun /> : <FaRegMoon />}
+            </button>
+          </div>
         </div>
       </header>
 
